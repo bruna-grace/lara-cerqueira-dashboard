@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Lara Cerqueira</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ─── shadcn/ui dark design tokens ──────────────────────── */
+    :root {
+      --bg:        #09090b;
+      --surface:   #0f0f12;
+      --surface-2: #1a1a1e;
+      --border:    #27272a;
+      --text-1:    #fafafa;
+      --text-2:    #a1a1aa;
+      --text-3:    #52525b;
+      --accent:    #fafafa;
+      --accent-fg: #09090b;
+      --green:     #22c55e;
+      --amber:     #f59e0b;
+      --red:       #ef4444;
+      --r:         10px;
+      --r-sm:      8px;
+      --r-xs:      6px;
+      --shadow:    0 1px 3px rgba(0,0,0,.5);
+      --shadow-md: 0 8px 30px rgba(0,0,0,.6);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Header ────────────────────────────────────────────── */
+    .topbar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+
+    .brand-logo {
+      width: 32px; height: 32px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xs);
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .brand-name { font-size: 14px; font-weight: 600; letter-spacing: -.3px; color: var(--text-1); }
+    .brand-sub  { font-size: 11px; color: var(--text-3); font-weight: 400; }
+
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+
+    .update-info { font-size: 12px; color: var(--text-3); text-align: right; }
+    .update-info strong { color: var(--text-2); font-weight: 500; }
+
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: var(--r-xs);
+    }
+
+    .badge-live::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 15px;
+      border: 1px solid transparent;
+      border-radius: var(--r-xs);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover  { background: #e4e4e7; border-color: #e4e4e7; }
+    .btn-primary:active { background: #d4d4d8; border-color: #d4d4d8; }
+
+    .btn-primary:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    .spin { animation: rotating .8s linear infinite; display: inline-block; }
+    @keyframes rotating { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+    /* ─── Layout ────────────────────────────────────────────── */
+    .page { max-width: 1440px; margin: 0 auto; padding: 28px 32px; }
+
+    /* ─── Section label ─────────────────────────────────────── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+
+    /* ─── KPI grid ──────────────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 20px 20px 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .2s, background .2s;
+    }
+
+    /* remove the colored top strip */
+    .kpi-card::after { display: none; }
+
+    .kpi-card:hover {
+      border-color: #3f3f46;
+      background: var(--surface-2);
+    }
+
+    .kpi-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+
+    .kpi-ico {
+      width: 30px; height: 30px;
+      border-radius: var(--r-xs);
+      background: var(--surface-2) !important;
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+    }
+
+    .kpi-val {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      margin-bottom: 6px;
+      color: var(--text-1);
+    }
+
+    .kpi-desc {
+      font-size: 11px;
+      color: var(--text-3);
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+
+    .kpi-foot { font-size: 11px; color: var(--text-3); }
+
+    .pos { color: var(--green); font-weight: 500; }
+    .neg { color: var(--red);   font-weight: 500; }
+    .neu { color: var(--text-2); font-weight: 400; }
+
+    /* ─── Chart cards ───────────────────────────────────────── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 24px 24px 18px;
+    }
+
+    .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; color: var(--text-1); letter-spacing: -.1px; }
+    .chart-sub   { font-size: 11px; color: var(--text-3); margin-bottom: 20px; }
+
+    .canvas-wrap       { position: relative; height: 300px; }
+    .canvas-wrap-lg    { position: relative; height: 340px; }
+    .canvas-wrap-donut { position: relative; height: 280px; }
+
+    .mb-20 { margin-bottom: 16px; }
+    .mb-28 { margin-bottom: 24px; }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .row-2-1 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    /* ─── Insights ──────────────────────────────────────────── */
+    .insights-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .insights-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+
+    .insights-ico {
+      width: 30px; height: 30px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xs);
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .insights-hd-text .t1 { font-size: 13px; font-weight: 600; color: var(--text-1); }
+    .insights-hd-text .t2 { font-size: 11px; color: var(--text-3); }
+
+    .insights-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+
+    .iitem {
+      display: flex;
+      gap: 10px;
+      padding: 12px 14px;
+      background: var(--surface-2);
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--border);
+    }
+
+    .iitem.ok   { border-left-color: var(--green); }
+    .iitem.warn { border-left-color: var(--amber); }
+    .iitem.bad  { border-left-color: var(--red);   }
+
+    .iico { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+    .ititle { font-size: 10px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--text-3); margin-bottom: 2px; }
+    .itext  { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+    /* ─── Loading / Error ───────────────────────────────────── */
+    .center-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 420px;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .loader {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: rotating .75s linear infinite;
+    }
+
+    .state-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+    .state-sub   { font-size: 12px; color: var(--text-3); max-width: 400px; }
+
+    /* ─── Responsive ────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .row-2, .row-2-1 { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .topbar { padding: 0 16px; height: auto; min-height: 52px; flex-wrap: wrap; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+      .page   { padding: 16px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .update-info { display: none; }
+      .canvas-wrap-lg { height: 240px; }
+    }
+
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ─── Divider ───────────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 4px 0 24px; }
+
+    /* ─── Light mode token overrides ───────────────────────── */
+    body.light {
+      --bg:        #ffffff;
+      --surface:   #ffffff;
+      --surface-2: #f4f4f5;
+      --border:    #e4e4e7;
+      --text-1:    #09090b;
+      --text-2:    #52525b;
+      --text-3:    #a1a1aa;
+      --accent:    #09090b;
+      --accent-fg: #fafafa;
+      --shadow:    0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 8px 30px rgba(0,0,0,.12);
+    }
+
+    body.light .btn-primary:hover  { background: #18181b; border-color: #18181b; }
+    body.light .btn-primary:active { background: #3f3f46; border-color: #3f3f46; }
+    body.light .kpi-card:hover     { border-color: #d4d4d8; }
+
+    /* ─── Theme toggle button ───────────────────────────────── */
+    .btn-theme {
+      width: 34px; height: 34px; padding: 0;
+      display: inline-grid; place-items: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--r-xs);
+      color: var(--text-2);
+      font-size: 15px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+      flex-shrink: 0;
+    }
+    .btn-theme:hover { background: var(--surface-2); color: var(--text-1); }
+
+    /* icons – show the right one per mode */
+    .btn-theme .ico-sun  { display: none; }
+    .btn-theme .ico-moon { display: block; }
+    body.light .btn-theme .ico-sun  { display: block; }
+    body.light .btn-theme .ico-moon { display: none; }
+
+    /* smooth theme transition */
+    body, .topbar, .kpi-card, .chart-card, .insights-card, .iitem, .loader {
+      transition: background .2s, border-color .2s, color .2s;
+    }
+
+    /* ─── Date Filter ───────────────────────────────────────── */
+    .date-filter {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .date-filter-sep {
+      font-size: 11px;
+      color: var(--text-3);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .date-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xs);
+      color: var(--text-1);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 4px 8px;
+      height: 30px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color .15s, background .2s, color .2s;
+      width: 118px;
+      flex-shrink: 0;
+    }
+    .date-input:focus { border-color: var(--text-3); }
+    .date-input::-webkit-calendar-picker-indicator {
+      filter: invert(0.6);
+      cursor: pointer;
+      opacity: .8;
+    }
+    body.light .date-input::-webkit-calendar-picker-indicator { filter: invert(0.3); }
+    body.light .date-input { background: var(--surface-2); color: var(--text-1); }
+    @media(max-width:720px) {
+      .date-filter { display: none; }
+    }
+
+    /* ─── Destaques por Canal ─────────────────────────────────── */
+    .destaques-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .destaque-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color .2s, background .2s;
+    }
+
+    .destaque-card:hover {
+      border-color: #3f3f46;
+      background: var(--surface-2);
+    }
+
+    body.light .destaque-card:hover { border-color: #d4d4d8; }
+
+    .destaque-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .destaque-header-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .destaque-icon { font-size: 15px; }
+
+    .destaque-channel {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      letter-spacing: -.1px;
+    }
+
+    .destaque-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 7px;
+      flex-shrink: 0;
+    }
+
+    .destaque-metric { display: flex; flex-direction: column; gap: 3px; }
+
+    .destaque-val {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      color: var(--text-1);
+    }
+
+    .destaque-metric-label {
+      font-size: 10px;
+      color: var(--text-3);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .destaque-content { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+
+    .destaque-title {
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .destaque-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .destaque-period { font-size: 11px; color: var(--text-3); }
+
+    .destaque-link {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-2);
+      text-decoration: none;
+      padding: 3px 9px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .destaque-link:hover { background: var(--surface-2); color: var(--text-1); }
+
+    .destaque-empty .destaque-channel { color: var(--text-3); }
+
+    .destaque-nodata {
+      font-size: 12px;
+      color: var(--text-3);
+      font-style: italic;
+      text-align: center;
+      padding: 18px 0 4px;
+    }
+
+    @media (max-width: 1100px) { .destaques-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px)  { .destaques-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════╗
+     ║  TOPBAR                                      ║
+     ╚══════════════════════════════════════════════╝ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">📊</div>
+    <div>
+      <div class="brand-name">Performance Digital</div>
+      <div class="brand-sub">Redes Sociais &amp; Google Ads</div>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <div class="date-filter">
+      <span class="date-filter-sep">De</span>
+      <input type="date" id="filterFrom" class="date-input" onchange="applyFilter()" title="Data inicial do período" />
+      <span class="date-filter-sep">até</span>
+      <input type="date" id="filterTo"   class="date-input" onchange="applyFilter()" title="Data final do período" />
+    </div>
+    <div class="update-info">
+      Última atualização<br>
+      <strong id="lastUpdate">—</strong>
+    </div>
+    <span class="badge-live">Ao vivo</span>
+    <button class="btn-theme" id="btnTheme" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar entre modo claro e escuro">
+      <span class="ico-moon">🌙</span>
+      <span class="ico-sun">☀️</span>
+    </button>
+    <button class="btn btn-primary" id="btnRefresh" onclick="loadAll()">
+      <span id="refreshIcon">↻</span> Atualizar dados
+    </button>
+  </div>
+</header>
+
+<!-- ╔══════════════════════════════════════════════╗
+     ║  MAIN                                        ║
+     ╚══════════════════════════════════════════════╝ -->
+<main class="page">
+
+  <!-- Loading -->
+  <div id="stateLoading" class="center-state">
+    <div class="loader"></div>
+    <div class="state-title">Carregando dados…</div>
+    <div class="state-sub">Buscando informações dos canais. Aguarde um instante.</div>
+  </div>
+
+  <!-- Error -->
+  <div id="stateError" class="center-state" style="display:none">
+    <div style="font-size:44px">⚠️</div>
+    <div class="state-title">Não foi possível carregar os dados</div>
+    <div class="state-sub" id="errMsg">Verifique os links dos CSVs e se a planilha está publicada na web.</div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="loadAll()">↻ Tentar novamente</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dash" style="display:none">
+
+    <!-- ── KPIs ── -->
+    <div class="section-label">Indicadores Principais</div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="divider"></div>
+
+    <!-- ── Gráfico 1: crescimento (linha) ── -->
+    <div class="section-label">Histórico de Crescimento</div>
+    <div class="chart-card mb-28">
+      <div class="chart-title">Crescimento de Seguidores / Inscritos por Canal</div>
+      <div class="chart-sub">Evolução histórica ao longo do período selecionado</div>
+      <div class="canvas-wrap-lg"><canvas id="cGrowth"></canvas></div>
+    </div>
+
+    <!-- ── Gráficos 2 e 3: impressões + CTR ── -->
+    <div class="section-label">Visibilidade &amp; Engajamento</div>
+    <div class="row-2">
+      <div class="chart-card">
+        <div class="chart-title">Impressões por Canal</div>
+        <div class="chart-sub">Impressões (busca/ads) ou Alcance (redes sociais)</div>
+        <div class="canvas-wrap"><canvas id="cImpressions"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">CTR por Canal</div>
+        <div class="chart-sub">CTR (busca/ads) ou Engajamento (redes sociais)</div>
+        <div class="canvas-wrap"><canvas id="cCTR"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── Gráfico 4: alcance (rosca) + Insights ── -->
+    <div class="section-label">Alcance &amp; Análise</div>
+    <div class="row-2-1">
+      <div class="chart-card">
+        <div class="chart-title">Visibilidade por Canal</div>
+        <div class="chart-sub" id="reachSub">Alcance (social) ou Impressões (busca/ads) · somente canais com dados disponíveis</div>
+        <div class="canvas-wrap-donut"><canvas id="cReach"></canvas></div>
+        <div id="reachMissing" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
+      </div>
+
+      <div class="insights-card">
+        <div class="insights-head">
+          <div class="insights-ico">💡</div>
+          <div class="insights-hd-text">
+            <div class="t1">Análise Automática</div>
+            <div class="t2">Insights gerados a partir dos seus dados reais</div>
+          </div>
+        </div>
+        <div class="insights-list" id="insightsList"></div>
+      </div>
+    </div>
+
+    <!-- ── Destaques por Canal ── -->
+    <div id="destaques-section" style="display:none">
+      <div class="divider"></div>
+      <div class="section-label">Destaques por Canal</div>
+      <div class="destaques-grid" id="destaquesGrid"></div>
+    </div>
+
+  </div><!-- /#dash -->
+</main>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  JAVASCRIPT                                                  ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<script>
+/* ================================================================
+   ⚙️  CONFIGURAÇÃO — EDITE AQUI E SOMENTE AQUI
+   ================================================================
+   Técnica: Google Visualization API (gviz/tq) com JSONP nativo.
+   Carrega via <script> tag — zero CORS, funciona de file://,
+   Google Sites, localhost ou qualquer origem.
+
+   Pré-requisito: planilha compartilhada como
+   "Qualquer pessoa com o link pode visualizar".
+
+   • SHEET_ID  : ID da planilha (entre /d/ e /edit na URL)
+   • sheetName : nome EXATO da aba (maiúsculas importam)
+   ================================================================ */
+
+/* ── ID DA PLANILHA ─────────────────────────────────────────── */
+const SHEET_ID = '1CFAtdLYQOw6ANV3ivIvEsZfcHhztPQ0-XBr3jIfl700';
+
+/* ── CANAIS ──────────────────────────────────────────────────── */
+const CHANNELS = [
+  {
+    id:        'instagram',
+    name:      'Instagram',
+    label:     'Seguidores',
+    desc:      'Total atual de seguidores da conta @laragabrielanut',
+    color:     '#fafafa',
+    bgIco:     '#1a1a1e',
+    icon:      '📸',
+    sheetName: 'Instagram',
+  },
+  {
+    id:        'facebook',
+    name:      'Facebook',
+    label:     'Seguidores',
+    desc:      'Total atual de seguidores da página',
+    color:     '#d4d4d8',
+    bgIco:     '#1a1a1e',
+    icon:      '👍',
+    sheetName: 'Facebook',
+  },
+];
+
+/* ── ALIASES DE COLUNAS — adicione variações se necessário ───── */
+const ALIASES = {
+  date:        ['data','date','mes','mes_ano','periodo','period','week','semana','month','dia','competencia'],
+  followers:   ['seguidores','followers','inscritos','subscribers','assinantes','fans','seguidores_total','total_seguidores','cliques_totais','cliques'],
+  reach:       ['alcance','reach','alcance_total','total_reach','pessoas_alcancadas','unique_reach','alcance_organico'],
+  impressions: ['impressoes','impressions','views','visualizacoes','exibicoes','total_impressoes','total_impressions','impressao'],
+  ctr:         ['ctr','taxa_de_cliques','click_through_rate','taxa_clique','ctr_percent','ctr_%','taxa_ctr','engajamento','engagement_rate'],
+  clicks:      ['cliques','clicks','link_clicks','cliques_link','total_cliques','cliques_no_link'],
+  investment:  ['investimento','investment','valor','gasto','spend','custo','cost','budget','orcamento','total_gasto','valor_investido'],
+  conversions: ['conversoes','conversions','resultados','leads','vendas','sales','total_conversoes'],
+};
+
+/* ================================================================
+   FIM DA CONFIGURAÇÃO
+   ================================================================ */
+
+
+/* ── Helpers de parsing ─────────────────────────────────────── */
+
+function norm(s) {
+  return String(s).trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[\s\-\/\\]+/g,'_')
+    .replace(/[^a-z0-9_]/g,'')
+    .replace(/_+/g,'_').replace(/^_|_$/g,'');
+}
+
+function toNum(v) {
+  if (v===null||v===undefined||v==='') return null;
+  if (typeof v==='number') return isNaN(v)?null:v;
+  const s = String(v).trim()
+    .replace(/[R$\s%€]/g,'')
+    .replace(/\.(?=\d{3})/g,'')
+    .replace(',','.');
+  const n = parseFloat(s);
+  return isNaN(n)?null:n;
+}
+
+function toDate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return isNaN(v.getTime())?null:v;
+  const s = String(v).trim();
+  /* tenta DD/MM/YYYY e DD-MM-YYYY ANTES do parse direto, para evitar
+     interpretação americana (MM/DD) pelo motor JS */
+  const tries = [
+    s.replace(/^(\d{2})\/(\d{2})\/(\d{4})$/,'$3-$2-$1'),
+    s.replace(/^(\d{2})-(\d{2})-(\d{4})$/,'$3-$2-$1'),
+    s,
+    s+'-01',
+  ];
+  for (const t of tries) {
+    const d = new Date(t);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+function findCol(headers, aliases) {
+  for (const a of aliases) {
+    const n = norm(a);
+    if (headers.includes(n)) return n;
+  }
+  for (const a of aliases) {
+    const n = norm(a);
+    const found = headers.find(h => h.includes(n)||n.includes(h));
+    if (found) return found;
+  }
+  return null;
+}
+
+/* Converte resposta gviz/tq → { heads, rows } com tipos já convertidos */
+function parseGviz(data) {
+  const table = data.table;
+  if (!table || !table.cols) throw new Error('Resposta gviz sem tabela');
+
+  const heads = table.cols.map(c => norm(c.label || c.id || ''));
+  const types = table.cols.map(c => c.type || 'string');
+
+  const rows = (table.rows || []).map(r => {
+    const row = {};
+    (r.c || []).forEach((cell, i) => {
+      if (!cell || cell.v === null || cell.v === undefined) {
+        row[heads[i]] = null; return;
+      }
+      if (types[i] === 'date' || types[i] === 'datetime') {
+        /* gviz codifica datas como "Date(2024,0,15)" em JSON */
+        const m = String(cell.v).match(/Date\((\d+),(\d+),(\d+)/);
+        row[heads[i]] = m ? new Date(+m[1], +m[2], +m[3]) : toDate(String(cell.v));
+      } else if (types[i] === 'number') {
+        row[heads[i]] = typeof cell.v === 'number' ? cell.v : toNum(cell.v);
+      } else {
+        row[heads[i]] = String(cell.v);
+      }
+    });
+    return row;
+  }).filter(r => Object.values(r).some(v => v !== null && v !== '' && v !== undefined));
+
+  return { heads, rows };
+}
+
+function processChannel(parsed, cfg) {
+  const h = parsed.heads;
+  const cols = {};
+  for (const [k, aliases] of Object.entries(ALIASES)) cols[k] = findCol(h, aliases);
+
+  let rows = parsed.rows.map(r => ({
+    date:        cols.date        ? toDate(r[cols.date])        : null,
+    followers:   cols.followers   ? toNum(r[cols.followers])    : null,
+    reach:       cols.reach       ? toNum(r[cols.reach])        : null,
+    impressions: cols.impressions ? toNum(r[cols.impressions])  : null,
+    ctr:         cols.ctr         ? toNum(r[cols.ctr])          : null,
+    clicks:      cols.clicks      ? toNum(r[cols.clicks])       : null,
+    investment:  cols.investment  ? toNum(r[cols.investment])   : null,
+    conversions: cols.conversions ? toNum(r[cols.conversions])  : null,
+  })).filter(r =>
+    r.followers!==null || r.reach!==null ||
+    r.impressions!==null || r.clicks!==null
+  );
+
+  // ordena por data se disponível
+  if (cols.date) rows.sort((a,b) => (!a.date?1:!b.date?-1:a.date-b.date));
+
+  const sum = (key) => rows.reduce((s,r) => s + (r[key]||0), 0);
+  const totals = {
+    reach:       sum('reach'),
+    impressions: sum('impressions'),
+    investment:  sum('investment'),
+    clicks:      sum('clicks'),
+    conversions: sum('conversions'),
+  };
+
+  const ctrVals = rows.filter(r=>r.ctr!==null).map(r=>r.ctr);
+  const avgCTR  = ctrVals.length
+    ? ctrVals.reduce((a,b)=>a+b,0)/ctrVals.length
+    : (totals.clicks && totals.impressions
+        ? (totals.clicks/totals.impressions)*100 : null);
+
+  const firstF = rows.find(r=>r.followers!==null);
+  const lastF  = [...rows].reverse().find(r=>r.followers!==null);
+  const latest = rows[rows.length-1] || {};
+
+  const growthAbs = (firstF && lastF && firstF!==lastF) ? lastF.followers - firstF.followers : null;
+  const growthPct = (growthAbs!==null && firstF?.followers>0)
+    ? (growthAbs/firstF.followers)*100 : null;
+
+  return { cfg, cols, rows, latest, totals, avgCTR,
+           latestFollowers: latest.followers ?? null,
+           growthAbs, growthPct };
+}
+
+
+/* ── Google gviz/tq JSONP — funciona de file://, Google Sites, qualquer origem ── */
+function fetchSheet(sheetName) {
+  return new Promise((resolve, reject) => {
+    /* nome único e válido como identificador JS */
+    const cb = 'gvizCb' + Date.now() + Math.floor(Math.random() * 99999);
+
+    const timer = setTimeout(() => {
+      delete window[cb];
+      document.getElementById(cb)?.remove();
+      reject(new Error(
+        '"' + sheetName + '" não respondeu em 15s.\n' +
+        'Confirme: planilha compartilhada como "Qualquer pessoa com o link pode ver".'
+      ));
+    }, 15000);
+
+    window[cb] = function(data) {
+      clearTimeout(timer);
+      delete window[cb];
+      document.getElementById(cb)?.remove();
+
+      if (!data || data.status === 'error') {
+        const msg = data?.errors?.[0]?.detailed_message
+                 || data?.errors?.[0]?.message
+                 || 'Erro na aba "' + sheetName + '".';
+        reject(new Error(msg)); return;
+      }
+      try { resolve(parseGviz(data)); }
+      catch(e) { reject(e); }
+    };
+
+    const script = document.createElement('script');
+    script.id  = cb;
+    script.src = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+                 '/gviz/tq?tqx=out:json;responseHandler:' + cb +
+                 '&sheet=' + encodeURIComponent(sheetName) +
+                 '&headers=1' +
+                 '&_nc=' + Date.now();
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cb];
+      script.remove();
+      reject(new Error(
+        'Falha ao acessar "' + sheetName + '".\n' +
+        'Confirme: planilha compartilhada como "Qualquer pessoa com o link pode ver".'
+      ));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+
+/* ── Estado global ──────────────────────────────────────────── */
+let DATA          = {};
+let CHARTS        = {};
+let RAW_PARSED    = {};   // { channelId: { parsed:{heads,rows}, cfg } }
+let DESTAQUES_RAW = null; // parsed da aba "Destaques"
+
+
+/* ── Formatters ─────────────────────────────────────────────── */
+const fmtN   = (n,d=0) => n==null||isNaN(n) ? '—' : n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtBRL = (n)     => n==null||isNaN(n) ? '—' : n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fmtPct = (n,d=1) => n==null||isNaN(n) ? '—' : n.toFixed(d)+'%';
+const fmtK   = (n)     => {
+  if (n==null||isNaN(n)) return '—';
+  if (n>=1e6) return (n/1e6).toFixed(1)+'M';
+  if (n>=1e3) return (n/1e3).toFixed(1)+'K';
+  return fmtN(n);
+};
+
+
+/* ── UI state ───────────────────────────────────────────────── */
+function showLoading() {
+  document.getElementById('stateLoading').style.display='flex';
+  document.getElementById('stateError').style.display='none';
+  document.getElementById('dash').style.display='none';
+  const btn=document.getElementById('btnRefresh');
+  btn.disabled=true;
+  document.getElementById('refreshIcon').className='spin';
+}
+
+function showDash() {
+  document.getElementById('stateLoading').style.display='none';
+  document.getElementById('stateError').style.display='none';
+  document.getElementById('dash').style.display='block';
+  const btn=document.getElementById('btnRefresh');
+  btn.disabled=false;
+  document.getElementById('refreshIcon').className='';
+}
+
+function showError(msg) {
+  document.getElementById('stateLoading').style.display='none';
+  document.getElementById('stateError').style.display='flex';
+  document.getElementById('dash').style.display='none';
+  document.getElementById('btnRefresh').disabled=false;
+  document.getElementById('refreshIcon').className='';
+
+  document.getElementById('errMsg').textContent = msg;
+}
+
+
+/* ── Date filter ────────────────────────────────────────────── */
+/** Preenche os inputs com o intervalo real dos dados após o primeiro load */
+function initDateFilter() {
+  let minDate = null, maxDate = null;
+  for (const { parsed } of Object.values(RAW_PARSED)) {
+    const colDate = findCol(parsed.heads, ALIASES.date);
+    if (!colDate) continue;
+    for (const row of parsed.rows) {
+      const d = row[colDate];
+      const date = d instanceof Date ? d : toDate(d);
+      if (!date) continue;
+      if (!minDate || date < minDate) minDate = date;
+      if (!maxDate || date > maxDate) maxDate = date;
+    }
+  }
+  const fromEl = document.getElementById('filterFrom');
+  const toEl   = document.getElementById('filterTo');
+  /* only set defaults if the user hasn't already picked a range */
+  if (!fromEl.value && minDate) fromEl.value = minDate.toISOString().slice(0,10);
+  if (!toEl.value   && maxDate) toEl.value   = maxDate.toISOString().slice(0,10);
+}
+
+/** Re-processa cada canal com as linhas filtradas pelo intervalo de datas */
+function applyFilter() {
+  if (!Object.keys(RAW_PARSED).length) return;
+
+  const fromVal = document.getElementById('filterFrom').value;
+  const toVal   = document.getElementById('filterTo').value;
+  /* add time component so the comparison is inclusive on both ends */
+  const from = fromVal ? new Date(fromVal + 'T00:00:00') : null;
+  const to   = toVal   ? new Date(toVal   + 'T23:59:59') : null;
+
+  DATA = {};
+  for (const [id, { parsed, cfg }] of Object.entries(RAW_PARSED)) {
+    let workParsed = parsed;
+    if (from || to) {
+      const colDate = findCol(parsed.heads, ALIASES.date);
+      const filteredRows = parsed.rows.filter(row => {
+        if (!colDate) return true;
+        const d = row[colDate];
+        const date = d instanceof Date ? d : toDate(d);
+        if (!date) return true;          // no date → always include
+        if (from && date < from) return false;
+        if (to   && date > to)   return false;
+        return true;
+      });
+      workParsed = { heads: parsed.heads, rows: filteredRows };
+    }
+    DATA[id] = processChannel(workParsed, cfg);
+  }
+
+  renderKPIs();
+  renderCharts();
+  renderInsights();
+  renderDestaques();
+}
+
+
+/* ── MAIN LOADER ────────────────────────────────────────────── */
+async function loadAll() {
+  showLoading();
+  DATA          = {};
+  RAW_PARSED    = {};
+  DESTAQUES_RAW = null;
+
+  const [results] = await Promise.all([
+    Promise.allSettled(
+      CHANNELS.map(async c => {
+        const parsed = await fetchSheet(c.sheetName);
+        RAW_PARSED[c.id] = { parsed, cfg: c };
+        return { id: c.id, data: processChannel(parsed, c) };
+      })
+    ),
+    fetchDestaques(),   // carrega em paralelo, não bloqueia em caso de falha
+  ]);
+
+  const errors = [];
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled') {
+      DATA[res.value.id] = res.value.data;
+    } else {
+      errors.push(`${CHANNELS[i].name}: ${res.reason?.message||'erro'}`);
+      console.warn('Erro ao carregar canal:', res.reason);
+    }
+  });
+
+  if (!Object.keys(DATA).length) {
+    showError(
+      'Nenhum canal carregou. Verifique:\n' +
+      '• A planilha está publicada na web (Arquivo → Compartilhar → Publicar na web)\n' +
+      '• Os nomes das abas estão corretos no código\n\n' +
+      errors.join('\n')
+    );
+    return;
+  }
+
+  renderKPIs();
+  renderCharts();
+  renderInsights();
+  renderDestaques();
+  document.getElementById('lastUpdate').textContent =
+    new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  initDateFilter();
+  showDash();
+}
+
+
+/* ── KPI Cards ──────────────────────────────────────────────── */
+function renderKPIs() {
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = '';
+
+  /* --- Cards por canal --- */
+  Object.values(DATA).forEach(ch => {
+    const v    = ch.latestFollowers;
+    const gpct = ch.growthPct;
+    let growthHtml = '';
+    if (gpct!==null) {
+      const cls  = gpct>=0 ? 'pos' : 'neg';
+      const sign = gpct>=0 ? '+' : '';
+      growthHtml = `<span class="${cls}">${sign}${fmtPct(gpct)}</span> no período`;
+    }
+
+    grid.innerHTML += `
+      <div class="kpi-card" style="--c:${ch.cfg.color}">
+        <div class="kpi-top">
+          <span class="kpi-label">${ch.cfg.name}</span>
+          <div class="kpi-ico" style="--bg-ico:${ch.cfg.bgIco};background:${ch.cfg.bgIco}">${ch.cfg.icon}</div>
+        </div>
+        <div class="kpi-val">${fmtK(v)}</div>
+        <div class="kpi-desc"><strong style="color:var(--text-2);font-weight:500">${ch.cfg.label}</strong><br>${ch.cfg.desc||''}</div>
+        ${growthHtml ? `<div class="kpi-foot">${growthHtml}</div>` : ''}
+      </div>`;
+  });
+
+  /* --- Investimento total --- */
+  const totalInv = Object.values(DATA).reduce((s,c)=>s+c.totals.investment,0);
+  if (totalInv > 0) {
+    grid.innerHTML += `
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Google ADS</span>
+          <div class="kpi-ico">💰</div>
+        </div>
+        <div class="kpi-val" style="font-size:22px">${fmtBRL(totalInv)}</div>
+        <div class="kpi-desc"><strong style="color:var(--text-2);font-weight:500">Investimento total</strong><br>Soma de tudo gasto em campanhas pagas no período</div>
+      </div>`;
+  }
+
+  /* --- CTR médio geral --- */
+  const ctrs = Object.values(DATA).filter(c=>c.avgCTR!==null).map(c=>c.avgCTR);
+  if (ctrs.length) {
+    const avg = ctrs.reduce((a,b)=>a+b,0)/ctrs.length;
+    grid.innerHTML += `
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">CTR Médio Geral</span>
+          <div class="kpi-ico">🎯</div>
+        </div>
+        <div class="kpi-val">${fmtPct(avg)}</div>
+        <div class="kpi-desc"><strong style="color:var(--text-2);font-weight:500">CTR médio</strong><br>% de pessoas que clicaram ao ver o conteúdo · média entre canais</div>
+      </div>`;
+  }
+}
+
+
+/* ── Helpers Chart.js ───────────────────────────────────────── */
+function rgba(hex, a) {
+  const [r,g,b] = [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+const FONT = { family:"'Inter', sans-serif" };
+
+/* ── Theme helpers ─────────────────────────────────────────────── */
+function isLight() { return document.body.classList.contains('light'); }
+
+function themeTokens() {
+  return isLight()
+    ? { bg:'#ffffff', surface:'#f4f4f5', border:'#e4e4e7', text1:'#09090b', text2:'#52525b', text3:'#a1a1aa' }
+    : { bg:'#0f0f12', surface:'#1a1a1e', border:'#27272a', text1:'#fafafa', text2:'#a1a1aa', text3:'#52525b' };
+}
+
+function getTooltipBase() {
+  const t = themeTokens();
+  return {
+    backgroundColor: t.bg,
+    titleFont: {...FONT, size:12, weight:'600'},
+    bodyFont:  {...FONT, size:11},
+    borderColor: t.border,
+    borderWidth: 1,
+    padding: 12, cornerRadius: 8, caretSize: 4,
+    titleColor: t.text1,
+    bodyColor:  t.text2,
+  };
+}
+function getTick()  { const t = themeTokens(); return { font:{...FONT,size:11}, color:t.text3 }; }
+function getGridY() { const t = themeTokens(); return { color:t.surface, drawBorder:false }; }
+
+function toggleTheme() {
+  const isNowLight = document.body.classList.toggle('light');
+  localStorage.setItem('dash-theme', isNowLight ? 'light' : 'dark');
+  // Re-render charts with new palette
+  if (Object.keys(DATA).length) renderCharts();
+}
+
+// Apply saved theme before first render
+(function initTheme() {
+  const saved = localStorage.getItem('dash-theme');
+  const preferLight = saved ? saved === 'light' : window.matchMedia('(prefers-color-scheme: light)').matches;
+  if (preferLight) document.body.classList.add('light');
+})();
+
+function killChart(id) {
+  if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; }
+}
+
+function renderCharts() {
+  renderGrowth();
+  renderImpressions();
+  renderCTR();
+  renderReach();
+}
+
+
+/* ── 1. Linha — crescimento ─────────────────────────────────── */
+function renderGrowth() {
+  killChart('g');
+
+  const allDates = new Set();
+  Object.values(DATA).forEach(ch =>
+    ch.rows.forEach(r => { if(r.date) allDates.add(r.date.toISOString().slice(0,10)); })
+  );
+  const dates = [...allDates].sort();
+  const hasDates = dates.length > 0;
+
+  const datasets = Object.values(DATA)
+    .filter(ch => ch.rows.some(r=>r.followers!==null))
+    .map(ch => {
+      let d;
+      if (hasDates) {
+        const map = {};
+        ch.rows.forEach(r => { if(r.date&&r.followers!==null) map[r.date.toISOString().slice(0,10)]=r.followers; });
+        d = dates.map(dt => map[dt]??null);
+      } else {
+        d = ch.rows.filter(r=>r.followers!==null).map(r=>r.followers);
+      }
+      return {
+        label: ch.cfg.name, data: d,
+        borderColor: ch.cfg.color,
+        backgroundColor: rgba(ch.cfg.color, .07),
+        fill: true, tension: .4,
+        borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6,
+        pointBackgroundColor: ch.cfg.color,
+      };
+    });
+
+  if (!datasets.length) return;
+
+  const labels = hasDates
+    ? dates.map(d => new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',day:'numeric'}))
+    : datasets[0].data.map((_,i)=>`Período ${i+1}`);
+
+  CHARTS.g = new Chart(document.getElementById('cGrowth').getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{...FONT,usePointStyle:true,pointStyle:'circle',padding:16,font:{...FONT,size:11},color:themeTokens().text2} },
+        tooltip:{ ...getTooltipBase(), callbacks:{ label: c=>` ${c.dataset.label}: ${fmtN(c.raw)}` } },
+      },
+      scales:{
+        x:{ grid:{display:false}, border:{display:false}, ticks:getTick() },
+        y:{ grid:getGridY(), border:{display:false}, ticks:{...getTick(), callback:v=>fmtK(v)} },
+      },
+    },
+  });
+}
+
+
+/* ── 2. Barras — impressões ─────────────────────────────────── */
+function renderImpressions() {
+  killChart('i');
+  /* impressions = métrica nativa; fallback = alcance para canais sem impressões (ex: Instagram) */
+  const chs = Object.values(DATA).map(c => ({
+    ...c, _imp: c.totals.impressions > 0 ? c.totals.impressions : c.totals.reach
+  })).filter(c => c._imp > 0);
+  if (!chs.length) return;
+
+  CHARTS.i = new Chart(document.getElementById('cImpressions').getContext('2d'), {
+    type:'bar',
+    data:{
+      labels: chs.map(c=>c.cfg.name),
+      datasets:[{
+        label:'Impressões / Alcance',
+        data: chs.map(c=>c._imp),
+        backgroundColor: chs.map(c=>rgba(c.cfg.color,.82)),
+        borderWidth:0, borderRadius:8, borderSkipped:false,
+      }],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ ...getTooltipBase(), callbacks:{ label:(c,i)=>{
+          const ch = chs[c.dataIndex];
+          const label = ch.totals.impressions>0 ? 'impressões' : 'alcance';
+          return ` ${fmtK(c.raw)} ${label}`;
+        }}},
+      },
+      scales:{
+        x:{ grid:{display:false}, border:{display:false}, ticks:getTick() },
+        y:{ grid:getGridY(), border:{display:false}, ticks:{...getTick(), callback:v=>fmtK(v)} },
+      },
+    },
+  });
+}
+
+
+/* ── 3. Barras — CTR ────────────────────────────────────────── */
+function renderCTR() {
+  killChart('c');
+  const chs = Object.values(DATA).filter(c=>c.avgCTR!==null);
+  if (!chs.length) return;
+
+  CHARTS.c = new Chart(document.getElementById('cCTR').getContext('2d'), {
+    type:'bar',
+    data:{
+      labels: chs.map(c=>c.cfg.name),
+      datasets:[{
+        label:'CTR (%)',
+        data: chs.map(c=>c.avgCTR),
+        backgroundColor: chs.map(c=>rgba(c.cfg.color,.82)),
+        borderWidth:0, borderRadius:8, borderSkipped:false,
+      }],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ ...getTooltipBase(), callbacks:{ label:c=>` CTR: ${fmtPct(c.raw)}` } },
+      },
+      scales:{
+        x:{ grid:{display:false}, border:{display:false}, ticks:getTick() },
+        y:{ grid:getGridY(), border:{display:false}, ticks:{...getTick(), callback:v=>v.toFixed(1)+'%'} },
+      },
+    },
+  });
+}
+
+
+/* ── 4. Rosca — alcance ─────────────────────────────────────── */
+function renderReach() {
+  killChart('r');
+  /* reach = alcance direto; fallback = impressões para canais sem coluna Alcance */
+  const all = Object.values(DATA).map(c => ({
+    ...c, _vis: c.totals.reach > 0 ? c.totals.reach : c.totals.impressions
+  }));
+  const chs     = all.filter(c => c._vis > 0);
+  const missing = all.filter(c => c._vis === 0);
+
+  /* nota sobre canais sem dados */
+  const noteEl = document.getElementById('reachMissing');
+  if (noteEl) {
+    if (missing.length) {
+      const t = themeTokens();
+      noteEl.style.display = 'block';
+      noteEl.innerHTML = missing.map(c => `
+        <span style="display:inline-flex;align-items:center;gap:5px;margin:0 10px 6px 0;font-size:11px;color:${t.text3}">
+          <span>${c.cfg.icon}</span>
+          <span>${c.cfg.name}</span>
+          <span style="font-size:10px;background:${t.surface};border:1px solid ${t.border};border-radius:3px;padding:1px 5px">sem dados</span>
+        </span>`).join('');
+    } else {
+      noteEl.style.display = 'none';
+    }
+  }
+
+  if (!chs.length) return;
+
+  CHARTS.r = new Chart(document.getElementById('cReach').getContext('2d'), {
+    type:'doughnut',
+    data:{
+      labels: chs.map(c=>c.cfg.name),
+      datasets:[{
+        data: chs.map(c=>c._vis),
+        backgroundColor: chs.map(c=>rgba(c.cfg.color,.88)),
+        borderColor: chs.map(c=>c.cfg.color),
+        borderWidth:2, hoverOffset:8,
+      }],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'64%',
+      plugins:{
+        legend:{ position:'bottom', labels:{usePointStyle:true,pointStyle:'circle',padding:14,font:{...FONT,size:11},color:themeTokens().text2} },
+        tooltip:{
+          ...getTooltipBase(),
+          callbacks:{
+            label: c => {
+              const total = c.dataset.data.reduce((a,b)=>a+b,0);
+              return ` ${fmtK(c.raw)} (${((c.raw/total)*100).toFixed(1)}%)`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+
+/* ── Insights automáticos ───────────────────────────────────── */
+function renderInsights() {
+  const list = document.getElementById('insightsList');
+  list.innerHTML = '';
+  const chs = Object.values(DATA);
+  if (!chs.length) return;
+
+  const ins = [];
+
+  /* canal com maior visibilidade (alcance ou impressões) */
+  const withVis = chs.map(c=>({...c,_vis:c.totals.reach>0?c.totals.reach:c.totals.impressions}));
+  const byReach = withVis.filter(c=>c._vis>0).sort((a,b)=>b._vis-a._vis);
+  if (byReach.length) {
+    const top   = byReach[0];
+    const total = byReach.reduce((s,c)=>s+c._vis,0);
+    const pct   = total>0 ? ((top._vis/total)*100).toFixed(0)+'%' : '';
+    const label = top.totals.reach>0 ? 'pessoas alcançadas' : 'impressões';
+    ins.push({ cls:'ok', ico:'🏆', t:'Maior Visibilidade',
+      txt:`${top.cfg.name} lidera com ${fmtK(top._vis)} ${label}${pct?' — '+pct+' do total':''}.` });
+  }
+
+  /* canal com maior crescimento */
+  const byGrowth = chs.filter(c=>c.growthPct!==null).sort((a,b)=>b.growthPct-a.growthPct);
+  if (byGrowth.length) {
+    const top = byGrowth[0];
+    if (top.growthPct > 0) {
+      ins.push({ cls:'ok', ico:'📈', t:'Maior Crescimento',
+        txt:`${top.cfg.name} cresceu ${fmtPct(top.growthPct)} no período (+${fmtK(top.growthAbs)} ${top.cfg.label.toLowerCase()}).` });
+    } else if (top.growthPct < 0) {
+      ins.push({ cls:'bad', ico:'📉', t:'Crescimento Negativo',
+        txt:`${top.cfg.name} registrou queda de ${fmtPct(Math.abs(top.growthPct))}. Considere revisar a estratégia de conteúdo.` });
+    }
+  }
+
+  /* CTR destaque */
+  const byCTR = chs.filter(c=>c.avgCTR!==null).sort((a,b)=>b.avgCTR-a.avgCTR);
+  if (byCTR.length) {
+    const top = byCTR[0];
+    const cls = top.avgCTR>=3?'ok':top.avgCTR>=1?'warn':'bad';
+    const comment = top.avgCTR>=3
+      ? 'excelente — acima da média do mercado'
+      : top.avgCTR>=1 ? 'dentro da média do mercado'
+      : 'abaixo da média — revise os criativos e segmentação';
+    ins.push({ cls, ico:'🎯', t:'CTR em Destaque',
+      txt:`${top.cfg.name} registrou CTR de ${fmtPct(top.avgCTR)}: ${comment}.` });
+  }
+
+  /* investimento e conversão / custo por clique */
+  const totalInv  = chs.reduce((s,c)=>s+c.totals.investment,0);
+  const totalConv = chs.reduce((s,c)=>s+c.totals.conversions,0);
+  const totalClk  = chs.reduce((s,c)=>s+c.totals.clicks,0);
+  if (totalInv > 0 && totalConv > 0) {
+    ins.push({ cls:'warn', ico:'💰', t:'Custo por Conversão',
+      txt:`${fmtBRL(totalInv)} investidos geraram ${fmtN(totalConv)} conversões — custo por resultado: ${fmtBRL(totalInv/totalConv)}.` });
+  } else if (totalInv > 0 && totalClk > 0) {
+    ins.push({ cls:'warn', ico:'💰', t:'Custo por Clique',
+      txt:`Investimento de ${fmtBRL(totalInv)} gerou ${fmtK(totalClk)} cliques — CPC médio de ${fmtBRL(totalInv/totalClk)}.` });
+  }
+
+  /* resumo geral */
+  const totalFol = chs.reduce((s,c)=>s+(c.latestFollowers||0),0);
+  const totalImp = chs.reduce((s,c)=>s+c.totals.impressions,0);
+  ins.push({ cls:'', ico:'📊', t:'Resumo do Período',
+    txt:`Audiência total de ${fmtK(totalFol)} pessoas em ${chs.length} canais monitorados${totalImp>0?', com '+fmtK(totalImp)+' impressões acumuladas':''}.` });
+
+  ins.forEach(it => {
+    list.innerHTML += `
+      <div class="iitem ${it.cls}">
+        <div class="iico">${it.ico}</div>
+        <div>
+          <div class="ititle">${it.t}</div>
+          <div class="itext">${it.txt}</div>
+        </div>
+      </div>`;
+  });
+}
+
+
+/* ── Destaques por Canal ────────────────────────────────────── */
+
+/* Configuração visual de cada canal na seção de destaques */
+const DESTAQUE_CHANNELS = [
+  { id:'instagram', name:'Instagram',    icon:'📸', label:'Melhor alcance no período'     },
+  { id:'facebook',  name:'Facebook',     icon:'👍', label:'Melhor alcance no período'     },
+  { id:'gsc',       name:'Google Search',icon:'🔍', label:'Página mais acessada'          },
+  { id:'youtube',   name:'YouTube',      icon:'▶️', label:'Vídeo mais assistido'          },
+];
+
+/** Busca a aba "Destaques" — não bloqueia o load se não existir */
+async function fetchDestaques() {
+  try {
+    DESTAQUES_RAW = await fetchSheet('Destaques');
+  } catch(e) {
+    console.info('Aba Destaques não encontrada — seção ocultada.', e.message);
+    DESTAQUES_RAW = null;
+  }
+}
+
+/** Retorna linhas da aba Destaques filtradas pelo intervalo de datas selecionado */
+function getFilteredDestaques() {
+  if (!DESTAQUES_RAW) return [];
+
+  const h = DESTAQUES_RAW.heads;
+  const colCanal   = findCol(h, ['canal','channel','rede']);
+  const colData    = findCol(h, ALIASES.date);
+  const colPeriodo = findCol(h, ['periodo','period','semana','referencia']);
+  const colTipo    = findCol(h, ['tipo','type','formato','format','categoria']);
+  const colTitulo  = findCol(h, ['titulo','title','conteudo','content','descricao','caption','pagina','page','video']);
+  const colMetrica = findCol(h, ['metrica','metric','indicador','kpi']);
+  const colValor   = findCol(h, ['valor','value','resultado','result','numero']);
+  const colURL     = findCol(h, ['url','link','href','permalink']);
+
+  const fromVal = document.getElementById('filterFrom')?.value;
+  const toVal   = document.getElementById('filterTo')?.value;
+  const from = fromVal ? new Date(fromVal + 'T00:00:00') : null;
+  const to   = toVal   ? new Date(toVal   + 'T23:59:59') : null;
+
+  return DESTAQUES_RAW.rows
+    .filter(row => {
+      if (!from && !to) return true;
+      if (!colData) return true;
+      const d = row[colData];
+      const date = d instanceof Date ? d : toDate(d);
+      if (!date) return true;
+      if (from && date < from) return false;
+      if (to   && date > to)   return false;
+      return true;
+    })
+    .map(row => ({
+      canal:   colCanal   ? norm(String(row[colCanal]||'')) : '',
+      periodo: colPeriodo ? String(row[colPeriodo]||'')     : '',
+      tipo:    colTipo    ? String(row[colTipo]||'')        : '',
+      titulo:  colTitulo  ? String(row[colTitulo]||'')      : '',
+      metrica: colMetrica ? String(row[colMetrica]||'')     : '',
+      valor:   colValor   ? toNum(row[colValor])            : null,
+      url:     colURL     ? String(row[colURL]||'')         : '',
+    }));
+}
+
+/** Renderiza a seção Destaques por Canal */
+function renderDestaques() {
+  const section = document.getElementById('destaques-section');
+  const grid    = document.getElementById('destaquesGrid');
+  if (!section || !grid) return;
+
+  if (!DESTAQUES_RAW) { section.style.display = 'none'; return; }
+
+  const rows = getFilteredDestaques();
+  section.style.display = 'block';
+  grid.innerHTML = '';
+
+  DESTAQUE_CHANNELS.forEach(ch => {
+    /* entre as linhas do período, pega a de maior valor para este canal */
+    const channelRows = rows.filter(r =>
+      r.canal === ch.id ||
+      r.canal.includes(ch.id.slice(0,4)) ||          // "inst" → instagram
+      (ch.id === 'gsc' && (r.canal.includes('gsc') || r.canal.includes('google')))
+    );
+    const best = channelRows.length
+      ? [...channelRows].sort((a,b) => (b.valor||0) - (a.valor||0))[0]
+      : null;
+
+    if (!best) {
+      grid.innerHTML += `
+        <div class="destaque-card destaque-empty">
+          <div class="destaque-header">
+            <div class="destaque-header-left">
+              <span class="destaque-icon">${ch.icon}</span>
+              <span class="destaque-channel">${ch.name}</span>
+            </div>
+          </div>
+          <div class="destaque-nodata">Sem dados no período</div>
+          <div class="destaque-footer">
+            <span class="destaque-period">—</span>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const valor   = best.valor !== null ? fmtK(best.valor) : '—';
+    const hasURL  = best.url && best.url !== 'null' && best.url.startsWith('http');
+    const linkHtml = hasURL
+      ? `<a href="${best.url}" target="_blank" rel="noopener" class="destaque-link">↗ Ver</a>`
+      : '';
+
+    grid.innerHTML += `
+      <div class="destaque-card">
+        <div class="destaque-header">
+          <div class="destaque-header-left">
+            <span class="destaque-icon">${ch.icon}</span>
+            <span class="destaque-channel">${ch.name}</span>
+          </div>
+          ${best.tipo ? `<span class="destaque-badge">${best.tipo}</span>` : ''}
+        </div>
+        <div class="destaque-metric">
+          <div class="destaque-val">${valor}</div>
+          <div class="destaque-metric-label">${best.metrica || ch.label}</div>
+        </div>
+        <div class="destaque-content">
+          <div class="destaque-title">${best.titulo || '—'}</div>
+          <div class="destaque-footer">
+            <span class="destaque-period">${best.periodo}</span>
+            ${linkHtml}
+          </div>
+        </div>
+      </div>`;
+  });
+}
+
+
+/* ── Boot ───────────────────────────────────────────────────── */
+loadAll();
+</script>
+</body>
+</html>
