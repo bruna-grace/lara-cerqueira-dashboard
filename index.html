@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — Lara Cerqueira</title>
+  <title>Lara Cerqueira · Dashboard de Performance Digital</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ─── shadcn/ui dark design tokens ──────────────────────── */
     :root {
@@ -546,6 +545,72 @@
 
     @media (max-width: 1100px) { .destaques-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px)  { .destaques-grid { grid-template-columns: 1fr; } }
+
+    /* ── Scorecards de totais ──────────────────────────────────── */
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .score-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .score-label { font-size: 12px; color: var(--text-2); font-weight: 500; display:flex; align-items:center; gap:7px; }
+    .score-val   { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin: 8px 0 4px; color: var(--text-1); }
+    .score-delta { font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+    .score-delta.up   { color: var(--green); }
+    .score-delta.down { color: var(--red); }
+    .score-delta.flat { color: var(--text-3); }
+    .score-sub   { font-size: 11px; color: var(--text-3); margin-top: 8px; }
+
+    /* ── Tabela semanal ────────────────────────────────────────── */
+    .wtable-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow-x: auto; box-shadow: var(--shadow); }
+    .wtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .wtable th { text-align: right; padding: 12px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-3); border-bottom: 1px solid var(--border); background: var(--bg); white-space: nowrap; }
+    .wtable th:first-child, .wtable td:first-child { text-align: left; }
+    .wtable td { padding: 11px 16px; text-align: right; color: var(--text-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .wtable tr:last-child td { border-bottom: none; }
+    .wtable tbody tr:hover td { background: var(--surface-2); }
+    .wtable td.num { color: var(--text-1); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .wtable .muted { color: var(--text-3); }
+
+    /* ── Toggle de tabela ──────────────────────────────────────── */
+    .section-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .table-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-2);
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .table-toggle:hover { background: var(--surface-2); color: var(--text-1); }
+    .toggle-icon {
+      display: inline-block;
+      transition: transform 0.3s ease;
+      font-size: 10px;
+    }
+    .table-toggle.expanded .toggle-icon { transform: rotate(180deg); }
+    .table-container {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .table-container.expanded { max-height: 2000px; }
+
+    /* ── Lançamentos ──────────────────────────────────────────── */
+    .wtable td.pos { color: var(--green); font-weight: 600; }
+    .lanc-badge { font-size:10px; font-weight:600; padding:2px 7px; border-radius:99px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-2); }
   </style>
 </head>
 <body>
@@ -557,8 +622,8 @@
   <div class="brand">
     <div class="brand-logo">📊</div>
     <div>
-      <div class="brand-name">Performance Digital</div>
-      <div class="brand-sub">Redes Sociais &amp; Google Ads</div>
+      <div class="brand-name">Lara Cerqueira</div>
+      <div class="brand-sub">Performance Digital · Nutrição &amp; Lançamentos</div>
     </div>
   </div>
 
@@ -607,54 +672,48 @@
   <!-- Dashboard -->
   <div id="dash" style="display:none">
 
-    <!-- ── KPIs ── -->
-    <div class="section-label">Indicadores Principais</div>
-    <div class="kpi-grid" id="kpiGrid"></div>
+    <!-- ── Lançamentos (topo) ── -->
+    <div id="lanc-section" style="display:none">
+      <div class="section-label">Lançamentos · resultados de funil</div>
+      <div class="score-grid" id="lancKpis"></div>
+      <div class="wtable-wrap" style="margin-top:16px">
+        <table class="wtable" id="lancTable"></table>
+      </div>
+      <div class="divider"></div>
+    </div>
+
+    <!-- ── Resumo do Período (Análise Automática) ── -->
+    <div class="section-label">Resumo do Período</div>
+    <div class="insights-card mb-28">
+      <div class="insights-head">
+        <div class="insights-ico">💡</div>
+        <div class="insights-hd-text">
+          <div class="t1">Análise Automática</div>
+          <div class="t2">Insights gerados a partir dos seus dados reais</div>
+        </div>
+      </div>
+      <div class="insights-list" id="insightsList"></div>
+    </div>
 
     <div class="divider"></div>
 
-    <!-- ── Gráfico 1: crescimento (linha) ── -->
-    <div class="section-label">Histórico de Crescimento</div>
-    <div class="chart-card mb-28">
-      <div class="chart-title">Crescimento de Seguidores / Inscritos por Canal</div>
-      <div class="chart-sub">Evolução histórica ao longo do período selecionado</div>
-      <div class="canvas-wrap-lg"><canvas id="cGrowth"></canvas></div>
+    <!-- ── Indicadores Principais (totais por canal) ── -->
+    <div class="section-label">Indicadores Principais · totais do período</div>
+    <div class="score-grid" id="scoreGrid"></div>
+
+    <div class="divider"></div>
+
+    <!-- ── Detalhamento Semanal (expansível) ── -->
+    <div class="section-label-row">
+      <div class="section-label">Detalhamento Semanal</div>
+      <button class="table-toggle" id="tableToggle" onclick="toggleTable()">
+        <span class="toggle-icon">▼</span>
+        <span class="toggle-text">Expandir</span>
+      </button>
     </div>
-
-    <!-- ── Gráficos 2 e 3: impressões + CTR ── -->
-    <div class="section-label">Visibilidade &amp; Engajamento</div>
-    <div class="row-2">
-      <div class="chart-card">
-        <div class="chart-title">Impressões por Canal</div>
-        <div class="chart-sub">Impressões (busca/ads) ou Alcance (redes sociais)</div>
-        <div class="canvas-wrap"><canvas id="cImpressions"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">CTR por Canal</div>
-        <div class="chart-sub">CTR (busca/ads) ou Engajamento (redes sociais)</div>
-        <div class="canvas-wrap"><canvas id="cCTR"></canvas></div>
-      </div>
-    </div>
-
-    <!-- ── Gráfico 4: alcance (rosca) + Insights ── -->
-    <div class="section-label">Alcance &amp; Análise</div>
-    <div class="row-2-1">
-      <div class="chart-card">
-        <div class="chart-title">Visibilidade por Canal</div>
-        <div class="chart-sub" id="reachSub">Alcance (social) ou Impressões (busca/ads) · somente canais com dados disponíveis</div>
-        <div class="canvas-wrap-donut"><canvas id="cReach"></canvas></div>
-        <div id="reachMissing" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
-      </div>
-
-      <div class="insights-card">
-        <div class="insights-head">
-          <div class="insights-ico">💡</div>
-          <div class="insights-hd-text">
-            <div class="t1">Análise Automática</div>
-            <div class="t2">Insights gerados a partir dos seus dados reais</div>
-          </div>
-        </div>
-        <div class="insights-list" id="insightsList"></div>
+    <div class="table-container" id="tableContainer" style="display:none">
+      <div class="wtable-wrap">
+        <table class="wtable" id="weekTable"></table>
       </div>
     </div>
 
@@ -689,6 +748,10 @@
 /* ── ID DA PLANILHA ─────────────────────────────────────────── */
 const SHEET_ID = '1CFAtdLYQOw6ANV3ivIvEsZfcHhztPQ0-XBr3jIfl700';
 
+/* ── Lançamentos (planilha separada, preenchida manualmente por lançamento) ── */
+const LANC_SHEET_ID = '1Jhgi6-V1gbA_r5mKtMEn1rqxKOlia7_6';
+const LANC_TAB      = 'Lançamentos';
+
 /* ── CANAIS ──────────────────────────────────────────────────── */
 const CHANNELS = [
   {
@@ -699,7 +762,7 @@ const CHANNELS = [
     color:     '#fafafa',
     bgIco:     '#1a1a1e',
     icon:      '📸',
-    sheetName: 'Instagram',
+    sheetName: 'Instagram',   // 👈 nome exato da aba
   },
   {
     id:        'facebook',
@@ -715,7 +778,7 @@ const CHANNELS = [
 
 /* ── ALIASES DE COLUNAS — adicione variações se necessário ───── */
 const ALIASES = {
-  date:        ['data','date','mes','mes_ano','periodo','period','week','semana','month','dia','competencia'],
+  date:        ['data_inicio','data','date','mes','mes_ano','periodo','period','week','semana','month','dia','competencia'],
   followers:   ['seguidores','followers','inscritos','subscribers','assinantes','fans','seguidores_total','total_seguidores','cliques_totais','cliques'],
   reach:       ['alcance','reach','alcance_total','total_reach','pessoas_alcancadas','unique_reach','alcance_organico'],
   impressions: ['impressoes','impressions','views','visualizacoes','exibicoes','total_impressoes','total_impressions','impressao'],
@@ -754,7 +817,11 @@ function toNum(v) {
 function toDate(v) {
   if (!v) return null;
   if (v instanceof Date) return isNaN(v.getTime())?null:v;
-  const s = String(v).trim();
+  let s = String(v).trim();
+  /* datas sem ano ("02/05" ou "02-05") — a planilha às vezes omite o ano.
+     Assume o ano corrente para não cair em 2001 (default do motor JS). */
+  const semAno = s.match(/^(\d{1,2})[\/-](\d{1,2})$/);
+  if (semAno) return new Date(new Date().getFullYear(), +semAno[2]-1, +semAno[1]);
   /* tenta DD/MM/YYYY e DD-MM-YYYY ANTES do parse direto, para evitar
      interpretação americana (MM/DD) pelo motor JS */
   const tries = [
@@ -777,7 +844,10 @@ function findCol(headers, aliases) {
   }
   for (const a of aliases) {
     const n = norm(a);
-    const found = headers.find(h => h.includes(n)||n.includes(h));
+    /* ignora colunas-lixo: o gviz rotula colunas vazias com a letra da
+       coluna (k, l, …, z, aa), que casariam por substring (ex: "ctr".includes("r")).
+       Exige header com ≥3 chars para o casamento parcial. */
+    const found = headers.find(h => h.length >= 3 && (h.includes(n) || n.includes(h)));
     if (found) return found;
   }
   return null;
@@ -811,6 +881,28 @@ function parseGviz(data) {
   }).filter(r => Object.values(r).some(v => v !== null && v !== '' && v !== undefined));
 
   return { heads, rows };
+}
+
+/* Converte resposta gviz (headers=0) num grid bruto: array de linhas,
+   cada linha é um array posicional de valores de célula (datas viram texto). */
+function parseGvizGrid(data) {
+  const table = data.table;
+  if (!table || !table.cols) throw new Error('gviz sem tabela');
+  const nc = table.cols.length;
+  return (table.rows || []).map(r => {
+    const arr = [];
+    for (let i = 0; i < nc; i++) {
+      const cell = (r.c || [])[i];
+      if (!cell || cell.v === null || cell.v === undefined) { arr.push(''); continue; }
+      const v = cell.v;
+      if (typeof v === 'string' && v.startsWith('Date(')) {
+        arr.push(cell.f || v.replace(/Date\((\d+),(\d+),(\d+).*/, (m,y,mo,d) => `${+d}/${+mo+1}/${y}`));
+      } else {
+        arr.push(v);
+      }
+    }
+    return arr;
+  });
 }
 
 function processChannel(parsed, cfg) {
@@ -865,7 +957,7 @@ function processChannel(parsed, cfg) {
 
 
 /* ── Google gviz/tq JSONP — funciona de file://, Google Sites, qualquer origem ── */
-function fetchSheet(sheetName) {
+function fetchSheet(sheetName, sheetId = SHEET_ID) {
   return new Promise((resolve, reject) => {
     /* nome único e válido como identificador JS */
     const cb = 'gvizCb' + Date.now() + Math.floor(Math.random() * 99999);
@@ -896,7 +988,7 @@ function fetchSheet(sheetName) {
 
     const script = document.createElement('script');
     script.id  = cb;
-    script.src = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+    script.src = 'https://docs.google.com/spreadsheets/d/' + sheetId +
                  '/gviz/tq?tqx=out:json;responseHandler:' + cb +
                  '&sheet=' + encodeURIComponent(sheetName) +
                  '&headers=1' +
@@ -920,6 +1012,7 @@ let DATA          = {};
 let CHARTS        = {};
 let RAW_PARSED    = {};   // { channelId: { parsed:{heads,rows}, cfg } }
 let DESTAQUES_RAW = null; // parsed da aba "Destaques"
+let LANC_RAW      = null; // parsed da planilha de Lançamentos
 
 
 /* ── Formatters ─────────────────────────────────────────────── */
@@ -1015,10 +1108,11 @@ function applyFilter() {
     DATA[id] = processChannel(workParsed, cfg);
   }
 
-  renderKPIs();
-  renderCharts();
   renderInsights();
+  renderScorecards();
+  renderTable();
   renderDestaques();
+  /* Lançamentos não dependem do filtro de data — têm granularidade mensal própria */
 }
 
 
@@ -1028,6 +1122,7 @@ async function loadAll() {
   DATA          = {};
   RAW_PARSED    = {};
   DESTAQUES_RAW = null;
+  LANC_RAW      = null;
 
   const [results] = await Promise.all([
     Promise.allSettled(
@@ -1038,6 +1133,7 @@ async function loadAll() {
       })
     ),
     fetchDestaques(),   // carrega em paralelo, não bloqueia em caso de falha
+    fetchLancamentos(), // Lançamentos — planilha separada, não bloqueia
   ]);
 
   const errors = [];
@@ -1060,9 +1156,10 @@ async function loadAll() {
     return;
   }
 
-  renderKPIs();
-  renderCharts();
   renderInsights();
+  renderScorecards();
+  renderTable();
+  renderLancamentos();
   renderDestaques();
   document.getElementById('lastUpdate').textContent =
     new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -1130,44 +1227,25 @@ function renderKPIs() {
 }
 
 
-/* ── Helpers Chart.js ───────────────────────────────────────── */
-function rgba(hex, a) {
-  const [r,g,b] = [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-const FONT = { family:"'Inter', sans-serif" };
-
-/* ── Theme helpers ─────────────────────────────────────────────── */
-function isLight() { return document.body.classList.contains('light'); }
-
-function themeTokens() {
-  return isLight()
-    ? { bg:'#ffffff', surface:'#f4f4f5', border:'#e4e4e7', text1:'#09090b', text2:'#52525b', text3:'#a1a1aa' }
-    : { bg:'#0f0f12', surface:'#1a1a1e', border:'#27272a', text1:'#fafafa', text2:'#a1a1aa', text3:'#52525b' };
-}
-
-function getTooltipBase() {
-  const t = themeTokens();
-  return {
-    backgroundColor: t.bg,
-    titleFont: {...FONT, size:12, weight:'600'},
-    bodyFont:  {...FONT, size:11},
-    borderColor: t.border,
-    borderWidth: 1,
-    padding: 12, cornerRadius: 8, caretSize: 4,
-    titleColor: t.text1,
-    bodyColor:  t.text2,
-  };
-}
-function getTick()  { const t = themeTokens(); return { font:{...FONT,size:11}, color:t.text3 }; }
-function getGridY() { const t = themeTokens(); return { color:t.surface, drawBorder:false }; }
-
 function toggleTheme() {
   const isNowLight = document.body.classList.toggle('light');
   localStorage.setItem('dash-theme', isNowLight ? 'light' : 'dark');
-  // Re-render charts with new palette
-  if (Object.keys(DATA).length) renderCharts();
+}
+
+function toggleTable() {
+  const container = document.getElementById('tableContainer');
+  const button = document.getElementById('tableToggle');
+  const isExpanded = container.classList.contains('expanded');
+
+  if (isExpanded) {
+    container.classList.remove('expanded');
+    button.classList.remove('expanded');
+    button.querySelector('.toggle-text').textContent = 'Expandir';
+  } else {
+    container.classList.add('expanded');
+    button.classList.add('expanded');
+    button.querySelector('.toggle-text').textContent = 'Colapsar';
+  }
 }
 
 // Apply saved theme before first render
@@ -1177,201 +1255,91 @@ function toggleTheme() {
   if (preferLight) document.body.classList.add('light');
 })();
 
-function killChart(id) {
-  if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; }
-}
-
-function renderCharts() {
-  renderGrowth();
-  renderImpressions();
-  renderCTR();
-  renderReach();
-}
-
-
-/* ── 1. Linha — crescimento ─────────────────────────────────── */
-function renderGrowth() {
-  killChart('g');
-
-  const allDates = new Set();
-  Object.values(DATA).forEach(ch =>
-    ch.rows.forEach(r => { if(r.date) allDates.add(r.date.toISOString().slice(0,10)); })
-  );
-  const dates = [...allDates].sort();
-  const hasDates = dates.length > 0;
-
-  const datasets = Object.values(DATA)
-    .filter(ch => ch.rows.some(r=>r.followers!==null))
-    .map(ch => {
-      let d;
-      if (hasDates) {
-        const map = {};
-        ch.rows.forEach(r => { if(r.date&&r.followers!==null) map[r.date.toISOString().slice(0,10)]=r.followers; });
-        d = dates.map(dt => map[dt]??null);
-      } else {
-        d = ch.rows.filter(r=>r.followers!==null).map(r=>r.followers);
-      }
-      return {
-        label: ch.cfg.name, data: d,
-        borderColor: ch.cfg.color,
-        backgroundColor: rgba(ch.cfg.color, .07),
-        fill: true, tension: .4,
-        borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6,
-        pointBackgroundColor: ch.cfg.color,
-      };
-    });
-
-  if (!datasets.length) return;
-
-  const labels = hasDates
-    ? dates.map(d => new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',day:'numeric'}))
-    : datasets[0].data.map((_,i)=>`Período ${i+1}`);
-
-  CHARTS.g = new Chart(document.getElementById('cGrowth').getContext('2d'), {
-    type:'line',
-    data:{ labels, datasets },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{...FONT,usePointStyle:true,pointStyle:'circle',padding:16,font:{...FONT,size:11},color:themeTokens().text2} },
-        tooltip:{ ...getTooltipBase(), callbacks:{ label: c=>` ${c.dataset.label}: ${fmtN(c.raw)}` } },
-      },
-      scales:{
-        x:{ grid:{display:false}, border:{display:false}, ticks:getTick() },
-        y:{ grid:getGridY(), border:{display:false}, ticks:{...getTick(), callback:v=>fmtK(v)} },
-      },
-    },
-  });
-}
-
-
-/* ── 2. Barras — impressões ─────────────────────────────────── */
-function renderImpressions() {
-  killChart('i');
-  /* impressions = métrica nativa; fallback = alcance para canais sem impressões (ex: Instagram) */
-  const chs = Object.values(DATA).map(c => ({
-    ...c, _imp: c.totals.impressions > 0 ? c.totals.impressions : c.totals.reach
-  })).filter(c => c._imp > 0);
-  if (!chs.length) return;
-
-  CHARTS.i = new Chart(document.getElementById('cImpressions').getContext('2d'), {
-    type:'bar',
-    data:{
-      labels: chs.map(c=>c.cfg.name),
-      datasets:[{
-        label:'Impressões / Alcance',
-        data: chs.map(c=>c._imp),
-        backgroundColor: chs.map(c=>rgba(c.cfg.color,.82)),
-        borderWidth:0, borderRadius:8, borderSkipped:false,
-      }],
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{ ...getTooltipBase(), callbacks:{ label:(c,i)=>{
-          const ch = chs[c.dataIndex];
-          const label = ch.totals.impressions>0 ? 'impressões' : 'alcance';
-          return ` ${fmtK(c.raw)} ${label}`;
-        }}},
-      },
-      scales:{
-        x:{ grid:{display:false}, border:{display:false}, ticks:getTick() },
-        y:{ grid:getGridY(), border:{display:false}, ticks:{...getTick(), callback:v=>fmtK(v)} },
-      },
-    },
-  });
-}
-
-
-/* ── 3. Barras — CTR ────────────────────────────────────────── */
-function renderCTR() {
-  killChart('c');
-  const chs = Object.values(DATA).filter(c=>c.avgCTR!==null);
-  if (!chs.length) return;
-
-  CHARTS.c = new Chart(document.getElementById('cCTR').getContext('2d'), {
-    type:'bar',
-    data:{
-      labels: chs.map(c=>c.cfg.name),
-      datasets:[{
-        label:'CTR (%)',
-        data: chs.map(c=>c.avgCTR),
-        backgroundColor: chs.map(c=>rgba(c.cfg.color,.82)),
-        borderWidth:0, borderRadius:8, borderSkipped:false,
-      }],
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{ ...getTooltipBase(), callbacks:{ label:c=>` CTR: ${fmtPct(c.raw)}` } },
-      },
-      scales:{
-        x:{ grid:{display:false}, border:{display:false}, ticks:getTick() },
-        y:{ grid:getGridY(), border:{display:false}, ticks:{...getTick(), callback:v=>v.toFixed(1)+'%'} },
-      },
-    },
-  });
-}
-
-
-/* ── 4. Rosca — alcance ─────────────────────────────────────── */
-function renderReach() {
-  killChart('r');
-  /* reach = alcance direto; fallback = impressões para canais sem coluna Alcance */
-  const all = Object.values(DATA).map(c => ({
-    ...c, _vis: c.totals.reach > 0 ? c.totals.reach : c.totals.impressions
-  }));
-  const chs     = all.filter(c => c._vis > 0);
-  const missing = all.filter(c => c._vis === 0);
-
-  /* nota sobre canais sem dados */
-  const noteEl = document.getElementById('reachMissing');
-  if (noteEl) {
-    if (missing.length) {
-      const t = themeTokens();
-      noteEl.style.display = 'block';
-      noteEl.innerHTML = missing.map(c => `
-        <span style="display:inline-flex;align-items:center;gap:5px;margin:0 10px 6px 0;font-size:11px;color:${t.text3}">
-          <span>${c.cfg.icon}</span>
-          <span>${c.cfg.name}</span>
-          <span style="font-size:10px;background:${t.surface};border:1px solid ${t.border};border-radius:3px;padding:1px 5px">sem dados</span>
-        </span>`).join('');
-    } else {
-      noteEl.style.display = 'none';
+/* ── Scorecards de totais do período ────────────────────────── */
+function renderScorecards() {
+  const grid = document.getElementById('scoreGrid');
+  if (!grid) return;
+  const cards = [];
+  const card = (ico, label, val, fmt, sub, deltaAbs) => {
+    if (val == null || (typeof val === 'number' && isNaN(val))) return;
+    let deltaHtml = '';
+    if (deltaAbs != null && deltaAbs !== 0) {
+      const up = deltaAbs > 0;
+      deltaHtml = `<div><span class="score-delta ${up?'up':'down'}">${up?'\u25b2':'\u25bc'} ${up?'+':''}${fmtN(deltaAbs)}</span></div>`;
     }
-  }
+    cards.push(`
+      <div class="score-card">
+        <div class="score-label">${ico} ${label}</div>
+        <div class="score-val">${fmt(val)}</div>
+        ${deltaHtml}
+        ${sub ? `<div class="score-sub">${sub}</div>` : ''}
+      </div>`);
+  };
 
-  if (!chs.length) return;
-
-  CHARTS.r = new Chart(document.getElementById('cReach').getContext('2d'), {
-    type:'doughnut',
-    data:{
-      labels: chs.map(c=>c.cfg.name),
-      datasets:[{
-        data: chs.map(c=>c._vis),
-        backgroundColor: chs.map(c=>rgba(c.cfg.color,.88)),
-        borderColor: chs.map(c=>c.cfg.color),
-        borderWidth:2, hoverOffset:8,
-      }],
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false, cutout:'64%',
-      plugins:{
-        legend:{ position:'bottom', labels:{usePointStyle:true,pointStyle:'circle',padding:14,font:{...FONT,size:11},color:themeTokens().text2} },
-        tooltip:{
-          ...getTooltipBase(),
-          callbacks:{
-            label: c => {
-              const total = c.dataset.data.reduce((a,b)=>a+b,0);
-              return ` ${fmtK(c.raw)} (${((c.raw/total)*100).toFixed(1)}%)`;
-            },
-          },
-        },
-      },
-    },
+  Object.values(DATA).forEach(ch => {
+    const c = ch.cfg, t = ch.totals;
+    if (c.id === 'gsc') {
+      card('\ud83d\udd0d', 'Cliques \u00b7 Google', t.clicks, fmtN, 'Visitas org\u00e2nicas no per\u00edodo');
+      card('\ud83d\udd0e', 'Impress\u00f5es \u00b7 Google', t.impressions, fmtN, 'Apari\u00e7\u00f5es na busca');
+    } else if (c.id === 'google_ads') {
+      if (t.clicks > 0)      card('\ud83c\udfaf', 'Cliques \u00b7 Ads', t.clicks, fmtN, 'Cliques em an\u00fancios');
+      if (t.investment > 0)  card('\ud83d\udcb0', 'Investimento \u00b7 Ads', t.investment, fmtBRL, 'Total gasto no per\u00edodo');
+      if (t.conversions > 0) card('\u2705', 'Convers\u00f5es \u00b7 Ads', t.conversions, fmtN, 'Resultados de campanhas');
+    } else if (c.id === 'youtube') {
+      card('\u25b6\ufe0f', 'Inscritos \u00b7 YouTube', ch.latestFollowers, fmtK, 'Total ao fim do per\u00edodo', ch.growthAbs);
+    } else {
+      /* redes sociais: alcance/impress\u00f5es n\u00e3o se somam (a mesma pessoa \u00e9 contada
+         a cada semana). Mostramos o MELHOR resultado do per\u00edodo \u2014 a semana de pico. */
+      const bestReach = Math.max(0, ...ch.rows.map(r => r.reach || 0));
+      const bestImpr  = Math.max(0, ...ch.rows.map(r => r.impressions || 0));
+      if (bestReach > 0) card(c.icon, `Melhor alcance \u00b7 ${c.name}`, bestReach, fmtK, 'Maior alcance numa semana do per\u00edodo');
+      if (bestImpr > 0)  card('\ud83d\udc41\ufe0f', `Melhores impress\u00f5es \u00b7 ${c.name}`, bestImpr, fmtK, 'Maior valor numa semana do per\u00edodo');
+      card('\u2795', `Seguidores \u00b7 ${c.name}`, ch.latestFollowers, fmtK, 'Total ao fim do per\u00edodo', ch.growthAbs);
+    }
   });
+
+  grid.innerHTML = cards.join('') || '<div class="state-sub">Sem dados no per\u00edodo.</div>';
+}
+
+/* ── Tabela de detalhamento semanal ─────────────────────────── */
+function renderTable() {
+  const table = document.getElementById('weekTable');
+  if (!table) return;
+  const ig = DATA.instagram, gsc = DATA.gsc, yt = DATA.youtube, ads = DATA.google_ads;
+  const byWeek = {};
+  const key = (d) => (d instanceof Date && !isNaN(d)) ? d.toISOString().slice(0,10) : null;
+  const put = (ch, mapFn) => (ch?.rows||[]).forEach(r => {
+    const k = key(r.date); if (!k) return;
+    byWeek[k] = byWeek[k] || {}; mapFn(byWeek[k], r);
+  });
+  put(ig,  (o,r)=>{ o.igSeg=r.followers; o.igAlc=r.reach; });
+  put(gsc, (o,r)=>{ o.gscClk=r.clicks; o.gscImp=r.impressions; });
+  put(yt,  (o,r)=>{ o.ytSub=r.followers; });
+  put(ads, (o,r)=>{ o.adsClk=r.clicks; o.adsInv=r.investment; });
+
+  const weeks = Object.keys(byWeek).sort().reverse();
+  const cell = (v, fmt) => (v==null||v==='') ? '<td class="muted">\u2014</td>' : `<td class="num">${fmt(v)}</td>`;
+  const fmtWeek = (k) => { const [y,m,d]=k.split('-'); return `${d}/${m}`; };
+
+  /* colunas poss\u00edveis \u2014 s\u00f3 renderiza as que t\u00eam ao menos 1 valor no per\u00edodo
+     (canais sem dados, como Google Ads, somem da tabela automaticamente) */
+  const COLS = [
+    { key:'igSeg',  label:'Seg. IG',        fmt:fmtN   },
+    { key:'igAlc',  label:'Alcance IG',     fmt:fmtN   },
+    { key:'gscClk', label:'Cliques Google', fmt:fmtN   },
+    { key:'gscImp', label:'Impr. Google',   fmt:fmtN   },
+    { key:'ytSub',  label:'Inscritos YT',   fmt:fmtN   },
+    { key:'adsClk', label:'Cliques Ads',    fmt:fmtN   },
+    { key:'adsInv', label:'Invest. Ads',    fmt:fmtBRL },
+  ].filter(c => weeks.some(k => byWeek[k][c.key] != null && byWeek[k][c.key] !== ''));
+
+  const head = `<thead><tr><th>Semana</th>${COLS.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>`;
+  const body = weeks.map(k =>
+    `<tr><td>${fmtWeek(k)}</td>${COLS.map(c => cell(byWeek[k][c.key], c.fmt)).join('')}</tr>`
+  ).join('');
+  const colspan = COLS.length + 1;
+
+  table.innerHTML = head + `<tbody>${body || `<tr><td colspan="${colspan}" class="muted">Sem dados no per\u00edodo.</td></tr>`}</tbody>`;
 }
 
 
@@ -1459,8 +1427,6 @@ function renderInsights() {
 const DESTAQUE_CHANNELS = [
   { id:'instagram', name:'Instagram',    icon:'📸', label:'Melhor alcance no período'     },
   { id:'facebook',  name:'Facebook',     icon:'👍', label:'Melhor alcance no período'     },
-  { id:'gsc',       name:'Google Search',icon:'🔍', label:'Página mais acessada'          },
-  { id:'youtube',   name:'YouTube',      icon:'▶️', label:'Vídeo mais assistido'          },
 ];
 
 /** Busca a aba "Destaques" — não bloqueia o load se não existir */
@@ -1474,7 +1440,7 @@ async function fetchDestaques() {
 }
 
 /** Retorna linhas da aba Destaques filtradas pelo intervalo de datas selecionado */
-function getFilteredDestaques() {
+function getFilteredDestaques(ignoreDate = false) {
   if (!DESTAQUES_RAW) return [];
 
   const h = DESTAQUES_RAW.heads;
@@ -1494,6 +1460,7 @@ function getFilteredDestaques() {
 
   return DESTAQUES_RAW.rows
     .filter(row => {
+      if (ignoreDate) return true;
       if (!from && !to) return true;
       if (!colData) return true;
       const d = row[colData];
@@ -1522,17 +1489,21 @@ function renderDestaques() {
 
   if (!DESTAQUES_RAW) { section.style.display = 'none'; return; }
 
-  const rows = getFilteredDestaques();
+  const rows    = getFilteredDestaques();
+  const allRows = getFilteredDestaques(true); // ignora data — fallback histórico
   section.style.display = 'block';
   grid.innerHTML = '';
 
+  const matchesChannel = (r, ch) =>
+    r.canal === ch.id ||
+    r.canal.includes(ch.id.slice(0,4)) ||            // "inst" → instagram
+    (ch.id === 'gsc' && (r.canal.includes('gsc') || r.canal.includes('google')));
+
   DESTAQUE_CHANNELS.forEach(ch => {
-    /* entre as linhas do período, pega a de maior valor para este canal */
-    const channelRows = rows.filter(r =>
-      r.canal === ch.id ||
-      r.canal.includes(ch.id.slice(0,4)) ||          // "inst" → instagram
-      (ch.id === 'gsc' && (r.canal.includes('gsc') || r.canal.includes('google')))
-    );
+    /* entre as linhas do período, pega a de maior valor para este canal;
+       se o período não tiver destaque, cai no melhor histórico do canal */
+    let channelRows = rows.filter(r => matchesChannel(r, ch));
+    if (!channelRows.length) channelRows = allRows.filter(r => matchesChannel(r, ch));
     const best = channelRows.length
       ? [...channelRows].sort((a,b) => (b.valor||0) - (a.valor||0))[0]
       : null;
@@ -1582,6 +1553,104 @@ function renderDestaques() {
         </div>
       </div>`;
   });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   LANÇAMENTOS — planilha separada, preenchida manualmente por lançamento
+   Colunas: Mês | Visitantes | … | Membros do Grupo | Vendas | … |
+            Conversão Visitantes (%) | … | Receita (R$) | Ticket Médio (R$)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* A planilha usa formato monetário US: "$1,206.00" (vírgula = milhar, ponto = decimal) */
+function lancNum(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return isNaN(v) ? null : v;
+  const s = String(v).trim().replace(/[R$\s%]/g, '').replace(/,/g, '');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+/* Percentuais formatados no Sheets voltam como fração (0.1895) pelo gviz;
+   texto "18.95%" volta como 18.95. Normaliza para o valor em % (18.95). */
+function lancPct(v) {
+  const n = lancNum(v);
+  if (n == null) return null;
+  return (n > 0 && n < 1) ? n * 100 : n;
+}
+
+async function fetchLancamentos() {
+  try {
+    LANC_RAW = await fetchSheet(LANC_TAB, LANC_SHEET_ID);
+  } catch (e) {
+    console.warn('Lançamentos indisponível:', e);
+    LANC_RAW = null;
+  }
+}
+
+function renderLancamentos() {
+  const section = document.getElementById('lanc-section');
+  if (!section) return;
+  if (!LANC_RAW) { section.style.display = 'none'; return; }
+
+  const h = LANC_RAW.heads;
+  const col = (al) => findCol(h, al);
+  const c = {
+    mes:      col(['mes']),
+    vis:      col(['visitantes']),
+    grupo:    col(['membros_do_grupo','membros_grupo','grupo']),
+    vendas:   col(['vendas']),
+    convVis:  col(['conversao_visitantes','conversao_visitante']),
+    receita:  col(['receita_r','receita']),
+    ticket:   col(['ticket_medio_r','ticket_medio']),
+  };
+
+  /* só lançamentos com resultado real (receita ou vendas > 0) */
+  const lancs = LANC_RAW.rows.map(r => ({
+    mes:     c.mes ? String(r[c.mes]||'').trim() : '',
+    vis:     lancNum(r[c.vis]),
+    grupo:   lancNum(r[c.grupo]),
+    vendas:  lancNum(r[c.vendas]),
+    convVis: lancPct(r[c.convVis]),
+    receita: lancNum(r[c.receita]),
+    ticket:  lancNum(r[c.ticket]),
+  })).filter(l => (l.receita > 0) || (l.vendas > 0));
+
+  if (!lancs.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const totalReceita = lancs.reduce((s,l) => s + (l.receita||0), 0);
+  const totalVendas  = lancs.reduce((s,l) => s + (l.vendas||0), 0);
+  const ticketGeral  = totalVendas > 0 ? totalReceita / totalVendas : null;
+  const melhor       = [...lancs].sort((a,b) => (b.receita||0)-(a.receita||0))[0];
+
+  const card = (label, val, sub) => `
+    <div class="score-card">
+      <div class="score-label">${label}</div>
+      <div class="score-val">${val}</div>
+      ${sub ? `<div class="score-sub">${sub}</div>` : ''}
+    </div>`;
+  document.getElementById('lancKpis').innerHTML =
+    card('💰 Receita total',      fmtBRL(totalReceita), `${lancs.length} lançamento${lancs.length>1?'s':''} realizados`) +
+    card('🛒 Vendas totais',      fmtN(totalVendas),    'produtos vendidos') +
+    card('🎯 Ticket médio',       fmtBRL(ticketGeral),  'receita ÷ vendas') +
+    card('🏆 Melhor lançamento',  fmtBRL(melhor.receita), melhor.mes);
+
+  const cell = (v, fmt) => (v == null) ? '<td class="muted">—</td>' : `<td class="num">${fmt(v)}</td>`;
+  const head = `<thead><tr>
+    <th>Lançamento</th><th>Visitantes</th><th>Grupo</th><th>Vendas</th>
+    <th>Conv. visitantes</th><th>Receita</th><th>Ticket médio</th>
+  </tr></thead>`;
+  const body = lancs.map(l => `<tr>
+    <td>${l.mes}</td>
+    ${cell(l.vis, fmtN)}
+    ${cell(l.grupo, fmtN)}
+    ${cell(l.vendas, fmtN)}
+    ${cell(l.convVis, v => fmtPct(v))}
+    <td class="num pos">${l.receita != null ? fmtBRL(l.receita) : '—'}</td>
+    ${cell(l.ticket, fmtBRL)}
+  </tr>`).join('');
+  document.getElementById('lancTable').innerHTML = head + `<tbody>${body}</tbody>`;
 }
 
 
