@@ -1,0 +1,10 @@
+{
+  "name": "lara-cerqueira-dashboard",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-04-27",
+
+  // Só o que está em public/ vira arquivo público
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+
+  "observability": { "enabled": true }
+}
