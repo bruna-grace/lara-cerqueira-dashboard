@@ -685,7 +685,19 @@
   <!-- Dashboard -->
   <div id="dash" style="display:none">
 
-    <!-- ── Impulsionar (campanha paga em andamento — topo) ── -->
+    <!-- ── Indicadores Principais (topo — respondem ao filtro de datas) ── -->
+    <div class="section-label">Indicadores principais · <span id="periodoLabel">período</span></div>
+    <div class="score-grid" id="scoreGrid"></div>
+
+    <!-- ── Melhores conteúdos do período ── -->
+    <div id="destaques-section" style="display:none">
+      <div class="section-label" style="margin-top:28px">Melhores conteúdos do período · Instagram, por alcance</div>
+      <div class="destaques-grid" id="destaquesGrid"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── Impulsionar (campanha paga) ── -->
     <div id="imp-section" style="display:none">
       <div class="section-label">Impulsionar · Set/Out 2026 · topo de funil → Black Friday</div>
       <div class="iitem warn imp-alert" id="impAlert" style="display:none">
@@ -714,27 +726,6 @@
       <div class="divider"></div>
     </div>
 
-    <!-- ── Resumo do Período (Análise Automática) ── -->
-    <div class="section-label">Resumo do Período</div>
-    <div class="insights-card mb-28">
-      <div class="insights-head">
-        <div class="insights-ico">💡</div>
-        <div class="insights-hd-text">
-          <div class="t1">Análise Automática</div>
-          <div class="t2">Insights gerados a partir dos seus dados reais</div>
-        </div>
-      </div>
-      <div class="insights-list" id="insightsList"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- ── Indicadores Principais (totais por canal) ── -->
-    <div class="section-label">Indicadores Principais · totais do período</div>
-    <div class="score-grid" id="scoreGrid"></div>
-
-    <div class="divider"></div>
-
     <!-- ── Detalhamento Semanal (expansível) ── -->
     <div class="section-label-row">
       <div class="section-label">Detalhamento Semanal</div>
@@ -749,11 +740,19 @@
       </div>
     </div>
 
-    <!-- ── Destaques por Canal ── -->
-    <div id="destaques-section" style="display:none">
-      <div class="divider"></div>
-      <div class="section-label">Destaques por Canal</div>
-      <div class="destaques-grid" id="destaquesGrid"></div>
+    <div class="divider" style="margin-top:24px"></div>
+
+    <!-- ── Resumo do Período (Análise Automática) ── -->
+    <div class="section-label">Resumo do Período</div>
+    <div class="insights-card mb-28">
+      <div class="insights-head">
+        <div class="insights-ico">💡</div>
+        <div class="insights-hd-text">
+          <div class="t1">Análise Automática</div>
+          <div class="t2">Insights gerados a partir dos seus dados reais</div>
+        </div>
+      </div>
+      <div class="insights-list" id="insightsList"></div>
     </div>
 
   </div><!-- /#dash -->
@@ -1033,6 +1032,7 @@ let IMP_RAW       = null; // parsed da aba "Impulsionar"
 const fmtN   = (n,d=0) => n==null||isNaN(n) ? '—' : n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtBRL = (n)     => n==null||isNaN(n) ? '—' : n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtPct = (n,d=1) => n==null||isNaN(n) ? '—' : n.toFixed(d)+'%';
+const fmtDia = (d)     => d instanceof Date && !isNaN(d) ? d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
 const fmtK   = (n)     => {
   if (n==null||isNaN(n)) return '—';
   if (n>=1e6) return (n/1e6).toFixed(1)+'M';
@@ -1276,6 +1276,13 @@ function toggleTable() {
 function renderScorecards() {
   const grid = document.getElementById('scoreGrid');
   if (!grid) return;
+
+  const datas = Object.values(DATA).flatMap(ch => ch.rows.map(r => r.date)).filter(Boolean);
+  const label = document.getElementById('periodoLabel');
+  if (label) label.textContent = datas.length
+    ? `semanas de ${fmtDia(new Date(Math.min(...datas)))} a ${fmtDia(new Date(Math.max(...datas)))}`
+    : 'sem dados no período';
+
   const cards = [];
   const card = (ico, label, val, fmt, sub, deltaAbs) => {
     if (val == null || (typeof val === 'number' && isNaN(val))) return;
@@ -1293,7 +1300,8 @@ function renderScorecards() {
       </div>`);
   };
 
-  Object.values(DATA).forEach(ch => {
+  /* ordem fixa do CHANNELS — DATA é montado na ordem em que as abas respondem */
+  CHANNELS.map(c => DATA[c.id]).filter(Boolean).forEach(ch => {
     const c = ch.cfg, t = ch.totals;
     if (c.id === 'gsc') {
       card('\ud83d\udd0d', 'Cliques \u00b7 Google', t.clicks, fmtN, 'Visitas org\u00e2nicas no per\u00edodo');
@@ -1304,14 +1312,39 @@ function renderScorecards() {
       if (t.conversions > 0) card('\u2705', 'Convers\u00f5es \u00b7 Ads', t.conversions, fmtN, 'Resultados de campanhas');
     } else if (c.id === 'youtube') {
       card('\u25b6\ufe0f', 'Inscritos \u00b7 YouTube', ch.latestFollowers, fmtK, 'Total ao fim do per\u00edodo', ch.growthAbs);
+    } else if (c.id === 'instagram') {
+      /* Seguidores ganhos = total na \u00faltima semana do per\u00edodo \u2212 total na primeira.
+         Alcance/visualiza\u00e7\u00f5es = soma das semanas: a mesma pessoa conta de novo a cada
+         semana, ent\u00e3o \u00e9 volume de exposi\u00e7\u00e3o, n\u00e3o pessoas \u00fanicas. */
+      /* a coluna seguidores \u00e9 o total no FIM de cada semana \u2014 a base de compara\u00e7\u00e3o \u00e9
+         a \u00faltima semana ANTES do per\u00edodo (sen\u00e3o o ganho da 1\u00aa semana some) */
+      const comSeg = ch.rows.filter(r => r.followers != null);
+      const fim = comSeg[comSeg.length - 1];
+      const todas = processChannel(RAW_PARSED.instagram.parsed, c).rows.filter(r => r.followers != null);
+      const antes = comSeg[0] && [...todas].reverse().find(r => r.date && comSeg[0].date && r.date < comSeg[0].date);
+      const base = antes || comSeg[0];
+      if (base && fim && base !== fim) {
+        const ganho = fim.followers - base.followers;
+        card('\ud83d\udcc8', 'Seguidores ganhos \u00b7 Instagram', ganho, v => (v > 0 ? '+' : '') + fmtN(v),
+          `${antes ? 'antes do per\u00edodo' : `semana de ${fmtDia(base.date)}`}: ${fmtN(base.followers)} \u2192 fim: ${fmtN(fim.followers)}` +
+          ` (${ganho >= 0 ? '+' : ''}${fmtPct(ganho / base.followers * 100)})`);
+      }
+      const comAlc = ch.rows.filter(r => r.reach != null);
+      if (comAlc.length) {
+        const pico = comAlc.reduce((a, b) => (b.reach > a.reach ? b : a));
+        card('\ud83d\udce3', 'Alcance no per\u00edodo \u00b7 Instagram', ch.totals.reach, fmtN,
+          `soma de ${comAlc.length} semana${comAlc.length > 1 ? 's' : ''} \u00b7 melhor semana: ${fmtK(pico.reach)} (${fmtDia(pico.date)})`);
+      }
+      const comViews = ch.rows.filter(r => r.impressions != null);
+      if (comViews.length) {
+        card('\ud83d\udc41\ufe0f', 'Visualiza\u00e7\u00f5es no per\u00edodo \u00b7 Instagram', ch.totals.impressions, fmtN,
+          comViews.length < ch.rows.length
+            ? `soma de ${comViews.length} das ${ch.rows.length} semanas (as demais sem dado)`
+            : `soma de ${comViews.length} semana${comViews.length > 1 ? 's' : ''}`);
+      }
+      card('\ud83d\udcf8', 'Seguidores \u00b7 Instagram', ch.latestFollowers, fmtN, 'Total ao fim do per\u00edodo');
     } else {
-      /* redes sociais: alcance/impress\u00f5es n\u00e3o se somam (a mesma pessoa \u00e9 contada
-         a cada semana). Mostramos o MELHOR resultado do per\u00edodo \u2014 a semana de pico. */
-      const bestReach = Math.max(0, ...ch.rows.map(r => r.reach || 0));
-      const bestImpr  = Math.max(0, ...ch.rows.map(r => r.impressions || 0));
-      if (bestReach > 0) card(c.icon, `Melhor alcance \u00b7 ${c.name}`, bestReach, fmtK, 'Maior alcance numa semana do per\u00edodo');
-      if (bestImpr > 0)  card('\ud83d\udc41\ufe0f', `Melhores impress\u00f5es \u00b7 ${c.name}`, bestImpr, fmtK, 'Maior valor numa semana do per\u00edodo');
-      card('\u2795', `Seguidores \u00b7 ${c.name}`, ch.latestFollowers, fmtK, 'Total ao fim do per\u00edodo', ch.growthAbs);
+      card(c.icon, `Seguidores \u00b7 ${c.name}`, ch.latestFollowers, fmtN, 'Total ao fim do per\u00edodo', ch.growthAbs);
     }
   });
 
@@ -1440,12 +1473,6 @@ function renderInsights() {
 
 /* ── Destaques por Canal ────────────────────────────────────── */
 
-/* Configuração visual de cada canal na seção de destaques */
-const DESTAQUE_CHANNELS = [
-  { id:'instagram', name:'Instagram',    icon:'📸', label:'Melhor alcance no período'     },
-  { id:'facebook',  name:'Facebook',     icon:'👍', label:'Melhor alcance no período'     },
-];
-
 /** Busca a aba "Destaques" — não bloqueia o load se não existir */
 async function fetchDestaques() {
   try {
@@ -1498,78 +1525,50 @@ function getFilteredDestaques(ignoreDate = false) {
     }));
 }
 
-/** Renderiza a seção Destaques por Canal */
+/** Melhores conteúdos do período: os posts de maior alcance entre os destaques
+    semanais (a coleta grava o melhor post de cada semana). Sem nada no período,
+    mostra os melhores do histórico, marcados como tal. */
+const DESTAQUES_TOP = 4;
+
 function renderDestaques() {
   const section = document.getElementById('destaques-section');
   const grid    = document.getElementById('destaquesGrid');
   if (!section || !grid) return;
-
   if (!DESTAQUES_RAW) { section.style.display = 'none'; return; }
 
-  const rows    = getFilteredDestaques();
-  const allRows = getFilteredDestaques(true); // ignora data — fallback histórico
+  const doInsta = r => r.canal.includes('inst');
+  let lista = getFilteredDestaques().filter(doInsta);
+  const historico = !lista.length;
+  if (historico) lista = getFilteredDestaques(true).filter(doInsta);
+  const top = lista.sort((a, b) => (b.valor || 0) - (a.valor || 0)).slice(0, DESTAQUES_TOP);
+
+  if (!top.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
-  grid.innerHTML = '';
 
-  const matchesChannel = (r, ch) =>
-    r.canal === ch.id ||
-    r.canal.includes(ch.id.slice(0,4)) ||            // "inst" → instagram
-    (ch.id === 'gsc' && (r.canal.includes('gsc') || r.canal.includes('google')));
-
-  DESTAQUE_CHANNELS.forEach(ch => {
-    /* entre as linhas do período, pega a de maior valor para este canal;
-       se o período não tiver destaque, cai no melhor histórico do canal */
-    let channelRows = rows.filter(r => matchesChannel(r, ch));
-    if (!channelRows.length) channelRows = allRows.filter(r => matchesChannel(r, ch));
-    const best = channelRows.length
-      ? [...channelRows].sort((a,b) => (b.valor||0) - (a.valor||0))[0]
-      : null;
-
-    if (!best) {
-      grid.innerHTML += `
-        <div class="destaque-card destaque-empty">
-          <div class="destaque-header">
-            <div class="destaque-header-left">
-              <span class="destaque-icon">${ch.icon}</span>
-              <span class="destaque-channel">${ch.name}</span>
-            </div>
-          </div>
-          <div class="destaque-nodata">Sem dados no período</div>
-          <div class="destaque-footer">
-            <span class="destaque-period">—</span>
-          </div>
-        </div>`;
-      return;
-    }
-
-    const valor   = best.valor !== null ? fmtK(best.valor) : '—';
-    const hasURL  = best.url && best.url !== 'null' && best.url.startsWith('http');
-    const linkHtml = hasURL
-      ? `<a href="${best.url}" target="_blank" rel="noopener" class="destaque-link">↗ Ver</a>`
-      : '';
-
-    grid.innerHTML += `
+  grid.innerHTML = top.map((d, i) => {
+    const hasURL = d.url && d.url.startsWith('http');
+    return `
       <div class="destaque-card">
         <div class="destaque-header">
           <div class="destaque-header-left">
-            <span class="destaque-icon">${ch.icon}</span>
-            <span class="destaque-channel">${ch.name}</span>
+            <span class="destaque-icon">${i === 0 ? '🏆' : '#' + (i + 1)}</span>
+            <span class="destaque-channel">${historico ? 'Histórico' : 'Semana de ' + d.periodo.split(/[–-]/)[0]}</span>
           </div>
-          ${best.tipo ? `<span class="destaque-badge">${best.tipo}</span>` : ''}
+          ${d.tipo ? `<span class="destaque-badge">${d.tipo}</span>` : ''}
         </div>
         <div class="destaque-metric">
-          <div class="destaque-val">${valor}</div>
-          <div class="destaque-metric-label">${best.metrica || ch.label}</div>
+          <div class="destaque-val">${d.valor != null ? fmtK(d.valor) : '—'}</div>
+          <div class="destaque-metric-label">pessoas alcançadas</div>
         </div>
         <div class="destaque-content">
-          <div class="destaque-title">${best.titulo || '—'}</div>
+          <div class="destaque-title">${d.titulo || '—'}</div>
           <div class="destaque-footer">
-            <span class="destaque-period">${best.periodo}</span>
-            ${linkHtml}
+            <span class="destaque-period">${d.periodo}</span>
+            ${hasURL ? `<a href="${d.url}" target="_blank" rel="noopener" class="destaque-link">↗ Ver post</a>` : ''}
           </div>
         </div>
       </div>`;
-  });
+  }).join('');
 }
 
 
